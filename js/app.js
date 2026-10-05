@@ -3,9 +3,10 @@ import * as supa from './supa.js';
 import { incidentLabel } from './catalog.js';
 import { validateCallback } from './phone.js';
 import { renderOfficialChannels } from './oficiales.js';
+import { checklistFor, SPEI_TEXT } from './checklists.js';
 
 const $ = (id) => document.getElementById(id);
-const VIEWS = ['v-cargando', 'v-sin-config', 'v-error', 'v-login', 'v-lleno', 'v-relato', 'v-caso'];
+const VIEWS = ['v-cargando', 'v-sin-config', 'v-error', 'v-login', 'v-lleno', 'v-relato', 'v-caso', 'v-cierre'];
 
 let currentCase = null;
 
@@ -49,8 +50,91 @@ async function renderCallback(c) {
   $('form-callback').classList.remove('oculto');
 }
 
+// Checklist: solo si una voluntaria confirmó Y verificó por callback (RLS también lo exige al guardar).
+async function renderChecklist(c) {
+  const steps = checklistFor(c.incident_type);
+  let progress = [];
+  try {
+    progress = await supa.rest(`checklist_progress?select=step,done&case_id=eq.${c.id}`);
+  } catch {
+    progress = [];
+  }
+  const done = new Set(progress.filter((p) => p.done).map((p) => p.step));
+  const list = $('checklist');
+  list.replaceChildren(
+    ...steps.map((step, i) => {
+      const n = i + 1;
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = done.has(n);
+      const text = document.createElement('span');
+      text.textContent = `${n}. ${step.text}`;
+      text.classList.toggle('paso-hecho', box.checked);
+      box.addEventListener('change', () => saveStep(c.id, n, box, text));
+      label.append(box, text);
+      li.append(label);
+      return li;
+    }),
+  );
+  $('texto-spei').textContent = SPEI_TEXT;
+}
+
+async function saveStep(caseId, step, box, text) {
+  $('check-error').classList.add('oculto');
+  try {
+    await supa.rest('checklist_progress?on_conflict=case_id,step', {
+      method: 'POST',
+      body: { case_id: caseId, step, done: box.checked },
+      prefer: 'resolution=merge-duplicates,return=minimal',
+    });
+    text.classList.toggle('paso-hecho', box.checked);
+  } catch {
+    box.checked = !box.checked;
+    $('check-error').textContent = 'No pudimos guardar ese paso. Intenta de nuevo.';
+    $('check-error').classList.remove('oculto');
+  }
+}
+
+async function closeCase() {
+  const c = currentCase;
+  const steps = checklistFor(c.incident_type);
+  const doneSteps = [...$('checklist').querySelectorAll('input')]
+    .map((box, i) => (box.checked ? steps[i]?.text : null))
+    .filter(Boolean);
+  const button = $('btn-cerrar');
+  button.disabled = true;
+  try {
+    await supa.rest(`cases?id=eq.${c.id}`, { method: 'PATCH', body: { status: 'closed' }, prefer: 'return=minimal' });
+  } catch {
+    button.disabled = false;
+    $('check-error').textContent = 'No pudimos cerrar tu caso. Intenta de nuevo.';
+    $('check-error').classList.remove('oculto');
+    return;
+  }
+  // Resumen: solo pasos hechos y canales oficiales. Nunca un veredicto de seguridad.
+  $('cierre-resumen').textContent = `Hiciste ${doneSteps.length} de ${steps.length} pasos:`;
+  $('cierre-pasos').replaceChildren(
+    ...doneSteps.map((t) => {
+      const li = document.createElement('li');
+      li.textContent = t;
+      return li;
+    }),
+  );
+  renderOfficialChannels($('cierre-canales'));
+  show('v-cierre', { session: true });
+}
+
 function renderCase(c) {
   currentCase = c;
+  const confirmed = c.status === 'confirmed' && Boolean(c.verified_at);
+  $('caso-pendiente').classList.toggle('oculto', confirmed);
+  $('caso-confirmado').classList.toggle('oculto', !confirmed);
+  $('caso-confirmado-linea').classList.toggle('oculto', !confirmed);
+  $('caso-etiqueta-ia').parentElement.classList.toggle('oculto', confirmed);
+  $('caso-nota-ia').classList.toggle('oculto', confirmed);
+  $('caso-titulo').textContent = confirmed ? 'Tu caso:' : 'Parece que es:';
   $('caso-relato').textContent = c.description;
   const unclassified = !c.incident_type || c.incident_type === 'sin_clasificar';
   $('caso-tipo').textContent = unclassified ? 'Todavía no sabemos qué tipo de caso es' : incidentLabel(c.incident_type);
@@ -59,11 +143,16 @@ function renderCase(c) {
     ? 'Una voluntaria lo va a revisar y te dirá qué hacer.'
     : 'Es solo una sugerencia. Una voluntaria la va a revisar y puede corregirla.';
   show('v-caso', { session: true });
-  renderCallback(c);
+  if (confirmed) renderChecklist(c);
+  else renderCallback(c);
 }
 
 async function loadOpenCase() {
-  const rows = await supa.rest(`cases?select=${CASE_FIELDS}&status=neq.closed&order=created_at.desc&limit=1`);
+  // Filtra por el propio usuario: si también es voluntaria, RLS le deja ver casos de otras personas.
+  const me = await supa.getUserId();
+  const rows = await supa.rest(
+    `cases?select=${CASE_FIELDS}&user_id=eq.${me}&status=neq.closed&order=created_at.desc&limit=1`,
+  );
   return rows[0] || null;
 }
 
@@ -196,6 +285,7 @@ async function submitCallback(event) {
 }
 
 $('form-callback').addEventListener('submit', submitCallback);
+$('btn-cerrar').addEventListener('click', closeCase);
 $('btn-google').addEventListener('click', () => supa.signInWithGoogle());
 $('btn-salir').addEventListener('click', async () => {
   await supa.signOut();

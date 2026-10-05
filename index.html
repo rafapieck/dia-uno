@@ -84,11 +84,13 @@
     <section id="v-caso" class="oculto">
       <div class="burbuja" id="caso-relato"></div>
       <div class="tarjeta" id="caso-sugerencia">
-        <p class="sugerencia-titulo">Parece que es:</p>
+        <p class="sugerencia-titulo" id="caso-titulo">Parece que es:</p>
         <h2 id="caso-tipo"></h2>
         <p><span class="etiqueta" id="caso-etiqueta-ia"></span></p>
         <p class="ayuda" id="caso-nota-ia">Es solo una sugerencia. Una voluntaria la va a revisar y puede corregirla.</p>
+        <p class="ok oculto" id="caso-confirmado-linea">✅ Confirmado por una voluntaria</p>
       </div>
+      <div id="caso-pendiente">
       <div class="tarjeta">
         <h2>Recibimos tu caso</h2>
         <p>Una voluntaria lo va a revisar. Antes de darte el primer paso, te va a llamar para confirmar que eres tú.</p>
@@ -131,6 +133,37 @@
         <p class="ayuda">No te vamos a mandar alertas ni mensajes. Entra aquí cuando quieras para ver si ya hay respuesta.</p>
         <button type="button" class="secundario" data-accion="recargar">Ver si ya hay respuesta</button>
       </div>
+      </div>
+
+      <div id="caso-confirmado" class="oculto">
+        <div class="tarjeta">
+          <h2>Tus pasos</h2>
+          <p class="ayuda">Márcalos conforme los hagas. Ve a tu ritmo.</p>
+          <ol class="checklist" id="checklist"></ol>
+          <p class="aviso-spei" id="texto-spei"></p>
+          <div id="check-error" class="error oculto" role="alert"></div>
+        </div>
+        <div class="tarjeta">
+          <p>Cuando termines, cierra tu caso. Al cerrarlo borramos lo que nos contaste.</p>
+          <button type="button" class="secundario" id="btn-cerrar">Cerrar mi caso</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="v-cierre" class="oculto">
+      <div class="tarjeta">
+        <h2>Cerraste tu caso</h2>
+        <p id="cierre-resumen"></p>
+        <ul class="lista" id="cierre-pasos"></ul>
+        <p>Borramos lo que nos contaste. Si algo vuelve a pasar, puedes abrir otro caso.</p>
+        <p class="aviso-spei">Nadie puede revertir un SPEI por ti; te guiamos en el proceso oficial.</p>
+      </div>
+      <div class="tarjeta">
+        <h2>Canales oficiales</h2>
+        <p class="ayuda">Si necesitas seguir, aquí puedes acudir:</p>
+        <ul class="lista" id="cierre-canales"></ul>
+        <button type="button" class="secundario" data-accion="recargar">Volver al inicio</button>
+      </div>
     </section>
 
     <section id="v-sesion" class="oculto">
@@ -138,6 +171,6 @@
     </section>
   </main>
 
-  <footer class="pie">Día Uno · <span class="demo">DEMO</span></footer>
+  <footer class="pie">Día Uno · <span class="demo">DEMO</span> · <a href="/voluntaria">Soy voluntaria</a></footer>
 </body>
 </html>
