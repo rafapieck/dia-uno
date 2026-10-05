@@ -45,7 +45,7 @@ Vercel es el servicio gratuito que pone la app en una dirección pública (una U
 
 A partir de aquí, cada vez que se suba un commit a GitHub, Vercel publica solo (no tienes que repetir estos pasos).
 
-### Paso B · Crear la base de datos en Supabase (toca ahora, después de F1)
+### Paso B · Crear la base de datos en Supabase ✅ hecho (2026-10-05): 27/27 PASS en Supabase real
 
 Supabase guarda los casos y se encarga del inicio de sesión. Es gratis. Este paso tarda unos 20 minutos.
 
@@ -82,3 +82,67 @@ Las pruebas de seguridad necesitan dos víctimas distintas (A y B).
 6. (Opcional) Para quitar la tablita de resultados: corre `drop schema rls_prueba cascade;`.
 
 **B5. Avísame** que todo salió PASS. Todavía **no** pongas llaves en Vercel; eso va en el Paso C (F2), junto con el login de Google.
+
+### Paso C · Login con Google y llaves en Vercel (toca ahora, después de F2)
+
+Son tres partes: Google (crear el "permiso" para entrar con Google), Supabase (conectarlo) y Vercel (darle las llaves a la app). Toma unos 30 minutos. **Nunca pegues llaves ni secretos en el repo ni en el chat.**
+
+> **Sobre la cuenta de Outlook:** "Entrar con Google" solo funciona con una **cuenta de Google**. Un correo de Outlook sirve **solo si** ya creaste una cuenta de Google con ese correo (en Google se llama "usar mi dirección de correo actual"). Para saberlo, entra a <https://accounts.google.com> con ese correo: si te deja entrar, sirve; si no, tienes dos opciones: crear ahí una cuenta de Google con ese correo, o usar otra cuenta de Gmail como víctima B. Si usas otro correo, crea ese usuario también en Supabase (Paso B3) para volver a correr las pruebas.
+
+**C1. Copia la dirección de regreso de Supabase**
+1. En Supabase, entra a **Authentication → Sign In / Providers** (en algunas versiones dice solo **Providers**).
+2. Busca **Google** en la lista y ábrelo. Copia el texto de **Callback URL (for OAuth)**; se ve así: `https://xxxxxxxx.supabase.co/auth/v1/callback`. Déjalo a la mano; **no** guardes nada todavía.
+
+**C2. Crea el permiso en Google Cloud**
+1. Entra a <https://console.cloud.google.com> con tu cuenta de Gmail principal y acepta los términos si te los pide.
+2. Arriba a la izquierda, da clic en el selector de proyecto → **New project** (Proyecto nuevo). Nombre: `dia-uno`. Da clic en **Create** y luego selecciónalo en el mismo selector.
+3. En el menú ☰ entra a **APIs & Services → OAuth consent screen** (puede aparecer como **Google Auth Platform**). Da clic en **Get started** y llena:
+   - **App name:** `Día Uno (DEMO)` · **User support email:** tu correo → **Next**.
+   - **Audience:** **External** → **Next**.
+   - **Contact information:** tu correo → **Next** → acepta la política → **Create**.
+4. En el menú de la izquierda entra a **Audience** (Público). En **Test users** da clic en **+ Add users**, agrega tus dos correos de prueba y da clic en **Save**. Mientras la app esté en modo **Testing**, solo esos correos pueden entrar. Para el demo, eso es justo lo que queremos.
+5. Entra a **Clients** (Clientes) → **+ Create client**:
+   - **Application type:** **Web application** · **Name:** `Día Uno web`.
+   - **Authorized JavaScript origins** → **+ Add URI** → `https://dia-uno.vercel.app`
+   - **Authorized redirect URIs** → **+ Add URI** → pega la **Callback URL** que copiaste en C1.
+   - Da clic en **Create**.
+6. Aparece una ventana con **Client ID** y **Client secret**. Cópialos (el secreto puede mostrarse solo una vez). No los guardes en ningún archivo del repo.
+
+**C3. Conecta Google con Supabase**
+1. Regresa a Supabase → **Authentication → Sign In / Providers → Google**.
+2. Activa **Enable Sign in with Google**. Pega el **Client ID** (en "Client IDs") y el **Client Secret**. Da clic en **Save**.
+3. Entra a **Authentication → URL Configuration**:
+   - **Site URL:** `https://dia-uno.vercel.app` → **Save**.
+   - **Redirect URLs** → **Add URL** → `https://dia-uno.vercel.app/**` → **Save URLs**.
+
+**C4. Copia las llaves de Supabase**
+1. En Supabase, da clic en el engrane **Project Settings**.
+2. En **Data API** (o en el botón **Connect** de arriba) copia la **Project URL** (`https://xxxxxxxx.supabase.co`).
+3. En **API Keys**:
+   - Si ves una pestaña **Legacy API Keys**, úsala: copia **anon public** y, con **Reveal**, **service_role**.
+   - Si no existe esa pestaña, copia la **Publishable key** (en lugar de anon) y una **Secret key** (en lugar de service_role).
+   La **service_role / Secret key** abre toda la base: **solo va en Vercel**, nunca en el navegador, el repo ni el chat.
+
+**C5. Pon las llaves en Vercel**
+1. En Vercel, abre el proyecto `dia-uno` → **Settings → Environment Variables**.
+2. Agrega una por una (en **Environments** deja marcados **Production**, **Preview** y **Development**), dando clic en **Save** cada vez:
+
+   | Key | Value |
+   |---|---|
+   | `SUPABASE_URL` | la Project URL |
+   | `SUPABASE_ANON_KEY` | la anon public (o Publishable key) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | la service_role (o Secret key). Marca **Sensitive** si aparece |
+   | `MAX_CASES_PER_VOLUNTEER` | `5` |
+
+   `GEMINI_API_KEY` y `CRON_SECRET` se agregan después (F3 y F7).
+3. Las llaves solo aplican a deploys nuevos: entra a **Deployments**, en el más reciente da clic en **⋯ → Redeploy → Redeploy**.
+
+**C6. Prueba en tu celular (pruebas 15, 16, 17 y 18)**
+1. Abre <https://dia-uno.vercel.app> y da clic en **Entrar con Google**. Elige la cuenta de la víctima A. Si Google dice *"Google hasn't verified this app"*, da clic en **Continue** (es normal en modo Testing). Debes ver **¿Qué pasó?**.
+2. Escribe cada una de estas y da clic en **Enviar**. Todas deben mostrar en rojo **"Nunca compartas eso, ni con nosotros."**:
+   - `mi codigo es 482913` (prueba 15)
+   - `mi nip es 1234` · `me clonaron la tarjeta 4111 1111 1111 1111` · `mi curp es GOMR800101HMSRRB09` (prueba 16)
+3. Escribe `hol` → debe pedirte al menos 10 letras (prueba 18; el caso de 2000 letras lo bloquea la caja de texto y lo prueba `npm test` en el servidor).
+4. En Supabase → **Table Editor → cases**: **no** debe haber ninguna fila con esos textos.
+5. Al final escribe `me sacaron $150,000 pesos` → debe aceptarse y mostrar **"Recibimos tu caso"** (prueba 17). En **Table Editor → cases** aparece esa fila (es tu caso DEMO; puedes dejarla).
+6. Avísame cómo te fue (con captura si algo falla).
