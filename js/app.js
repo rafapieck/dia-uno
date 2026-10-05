@@ -1,5 +1,6 @@
 // Pantallas de la víctima. Todo el texto de la víctima se pinta con textContent (nunca innerHTML).
 import * as supa from './supa.js';
+import { incidentLabel } from './catalog.js';
 
 const $ = (id) => document.getElementById(id);
 const VIEWS = ['v-cargando', 'v-sin-config', 'v-error', 'v-login', 'v-relato', 'v-caso'];
@@ -19,6 +20,12 @@ function showError(message) {
 
 function renderCase(c) {
   $('caso-relato').textContent = c.description;
+  const unclassified = !c.incident_type || c.incident_type === 'sin_clasificar';
+  $('caso-tipo').textContent = unclassified ? 'Todavía no sabemos qué tipo de caso es' : incidentLabel(c.incident_type);
+  $('caso-etiqueta-ia').textContent = c.ai_simulated ? 'IA simulada' : 'Sugerencia de IA';
+  $('caso-nota-ia').textContent = unclassified
+    ? 'Una voluntaria lo va a revisar y te dirá qué hacer.'
+    : 'Es solo una sugerencia. Una voluntaria la va a revisar y puede corregirla.';
   show('v-caso', { session: true });
 }
 

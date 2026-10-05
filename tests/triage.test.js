@@ -10,6 +10,7 @@ let inserted;
 
 beforeEach(() => {
   setEnv();
+  delete process.env.GEMINI_API_KEY;
   inserted = [];
   fetchMock = mockFetch([
     authRoute,
@@ -110,7 +111,7 @@ test('el cliente no puede mandar su propio user_id ni status', async () => {
     res,
   );
   assert.equal(res.statusCode, 201);
-  assert.deepEqual(Object.keys(inserted[0]).sort(), ['description', 'user_id']);
+  assert.deepEqual(Object.keys(inserted[0]).sort(), ['ai_simulated', 'description', 'incident_type', 'urgency', 'user_id']);
   assert.equal(inserted[0].user_id, USERS['tok-a'].id);
 });
 
@@ -124,4 +125,41 @@ test('solo POST', async () => {
   const res = makeRes();
   await handler(makeReq({ method: 'GET', token: 'tok-a' }), res);
   assert.equal(res.statusCode, 405);
+});
+
+test('1/25 · sin llave de Gemini: guarda la sugerencia simulada con su marca', async () => {
+  const res = await post('me hakearon el wats y piden dinero');
+  assert.equal(res.statusCode, 201);
+  assert.equal(inserted[0].incident_type, 'whatsapp');
+  assert.equal(inserted[0].ai_simulated, true);
+  assert.equal(res.body.case.ai_simulated, true);
+});
+
+test('Gemini solo recibe el texto redactado (sin teléfono ni correo)', async () => {
+  process.env.GEMINI_API_KEY = 'gem-demo';
+  fetchMock.restore();
+  let sentToGemini = '';
+  fetchMock = mockFetch([
+    authRoute,
+    {
+      match: (u) => u.startsWith('https://generativelanguage.googleapis.com/'),
+      reply: (u, init) => {
+        sentToGemini = init.body;
+        return { json: { candidates: [{ content: { parts: [{ text: '{"incident_type":"whatsapp","urgency":"alta"}' }] } }] } };
+      },
+    },
+    {
+      match: (u, init) => u.startsWith(`${SUPA}/rest/v1/cases`) && init.method === 'POST',
+      reply: (u, init) => {
+        const row = JSON.parse(init.body);
+        inserted.push(row);
+        return { status: 201, json: [{ id: 'case-2', ...row }] };
+      },
+    },
+  ]);
+  const res = await post('me hakearon el wats, mi numero es 5512345678 y mi correo beto@gmail.com');
+  assert.equal(res.statusCode, 201);
+  assert.ok(sentToGemini.includes('[teléfono]') && sentToGemini.includes('[correo]'));
+  assert.ok(!sentToGemini.includes('5512345678') && !sentToGemini.includes('beto@gmail.com'));
+  assert.equal(inserted[0].ai_simulated, false);
 });

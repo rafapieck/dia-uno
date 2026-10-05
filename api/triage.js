@@ -1,9 +1,11 @@
 // POST /api/triage — recibe el relato de la víctima.
-// Orden (PACKET §5, §12.4): sesión → longitud 10–500 → filtro de secretos → redacción → guardar.
+// Orden (PACKET §5, §12.4): sesión → longitud 10–500 → filtro de secretos → redacción
+// → sugerencia de la IA (solo con el texto redactado) → guardar.
 // Si hay un secreto: se rechaza SIN guardar nada y SIN loguear el cuerpo.
 import { send, readBody, methodNotAllowed } from './_lib/http.js';
 import { supabaseConfigured, getUser, db } from './_lib/supabase.js';
 import { checkDescription, findSecret, redact, secretLabel, SECRET_MESSAGE } from './_lib/secrets.js';
+import { classify } from './_lib/classify.js';
 
 const CASE_FIELDS = 'id,description,incident_type,urgency,status,created_at,verified_at,ai_simulated,callback_failed_at';
 
@@ -30,11 +32,12 @@ export default async function handler(req, res) {
   }
 
   const description = redact(check.text);
+  const { incident_type, urgency, ai_simulated } = await classify(description);
 
   try {
     const rows = await db(`cases?select=${CASE_FIELDS}`, {
       method: 'POST',
-      body: { user_id: user.id, description },
+      body: { user_id: user.id, description, incident_type, urgency, ai_simulated },
       prefer: 'return=representation',
     });
     return send(res, 201, { case: rows[0] });
