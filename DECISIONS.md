@@ -25,7 +25,27 @@ Formato: fecha · decisión · por qué.
 - **Dos columnas extra en `cases`:** `ai_simulated` (para mostrar la etiqueta "IA simulada") y `callback_failed_at` (para que la víctima vea "no pudimos contactarte" sin leer `callbacks`). No exponen datos de la víctima.
 - **Pruebas de RLS automatizadas:** `supabase/tests/rls_test.sql` sirve igual en Supabase real (con 2 usuarios de prueba, limpia al final) y en un Postgres local con `shim.sql` (imita `auth.uid()` y los roles de Supabase). Control negativo: si se afloja una política, la prueba correspondiente da FAIL.
 
+- **Paso B ✅:** Rafael corrió `rls_test.sql` en Supabase real: 27/27 PASS.
+
+### F2 · Login y relato con filtro de secretos
+
+- **Cero dependencias en el navegador** (confirmado por Rafael): en vez de `supabase-js` desde un CDN, `js/supa.js` (~150 líneas) hace el login con Google por **PKCE** (el token nunca viaja en la URL), renueva la sesión y consulta PostgREST con la llave anon. *Por qué:* nada externo que cargar en celulares viejos y la CSP queda en `script-src 'self'`.
+- **Sesión en `localStorage`** (igual que hace `supabase-js`), envuelto en try/catch; la CSP sin scripts externos reduce el riesgo de XSS. El texto de la víctima se pinta siempre con `textContent`.
+- **`/api/config`** entrega solo la URL de Supabase y la llave anon (públicas por diseño).
+- **`/api/triage` en este orden:** sesión válida (Supabase Auth) → 10–500 caracteres → filtro de secretos → redacción → guardar con `service_role`. El `user_id` sale del token, nunca del cliente. Si hay secreto: 422, sin tocar la base, sin loguear, y la respuesta no repite el dato.
+- **Filtro de secretos (`api/_lib/secrets.js`), sin acentos ni mayúsculas:**
+  - códigos de 4–8 dígitos cerca (antes o después) de "código / clave / token / verificación";
+  - NIP de 4–6; CVV;
+  - tarjetas de 13–19 dígitos con Luhn; cualquier corrida de 18 dígitos es CLABE;
+  - CURP con estructura oficial (fecha, sexo, estado);
+  - contraseñas solo si se escribe el valor ("mi contraseña es X"), no si solo se menciona la palabra.
+
+  Los montos con `$`, "pesos", "mil", etc. no se bloquean.
+- **Límite conocido:** un número suelto sin palabra clave ("me llegó 482913") no se bloquea, porque se confundiría con montos escritos sin `$` ("me sacaron 150000"). El banner y la ayuda del formulario piden no escribirlos.
+- **Redacción:** correos → `[correo]`, números de 8–13 dígitos → `[teléfono]` (excepto montos).
+- **Una sola pantalla de caso abierto:** si la víctima ya tiene un caso sin cerrar, ve ese caso en lugar del formulario.
+
 ## Primer paso de mañana
 
-1. Rafael: Paso B del README (crear Supabase, correr `schema.sql`, crear 2 usuarios y correr `rls_test.sql`); confirmar que todo da PASS.
-2. Agente: F2 — login con Google y `POST /api/triage` con filtro de secretos, más el Paso C del README (Google Sign-In y llaves en Vercel).
+1. Rafael: Paso C del README (Google Sign-In, llaves en Vercel, redeploy) y pruebas 15–18 en el celular.
+2. Agente: F3 — triage con Gemini (texto delimitado como dato, validación contra el catálogo) y respaldo por palabras clave con etiqueta "IA simulada", más el paso para crear `GEMINI_API_KEY`.

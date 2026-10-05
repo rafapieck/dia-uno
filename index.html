@@ -6,6 +6,7 @@
   <title>Día Uno · Primer auxilio digital</title>
   <meta name="description" content="Primer auxilio digital para víctimas de robo de cuentas en México. DEMO.">
   <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/js/app.js"></script>
 </head>
 <body>
   <div class="top">
@@ -19,11 +20,58 @@
     <div class="banner" role="note">⚠️ Nunca te pediremos tu código ni tu contraseña</div>
   </div>
 
-  <main id="app">
-    <section class="tarjeta">
-      <h2>Hola. Estamos para ayudarte.</h2>
-      <p>Si te robaron tu WhatsApp, tu chip, tus redes o te sacaron dinero, aquí te decimos qué hacer primero.</p>
-      <p class="ayuda">Esta es una versión de prueba (DEMO). Los casos que ves aquí son inventados.</p>
+  <main id="app" aria-live="polite">
+    <section id="v-cargando" class="tarjeta">
+      <p>Cargando…</p>
+    </section>
+
+    <section id="v-sin-config" class="tarjeta oculto">
+      <h2>La app todavía no está lista</h2>
+      <p>Estamos terminando de configurarla. Intenta más tarde.</p>
+    </section>
+
+    <section id="v-error" class="tarjeta oculto">
+      <h2>Algo salió mal</h2>
+      <p id="error-texto">No pudimos cargar la página. Revisa tu internet e intenta de nuevo.</p>
+      <button type="button" class="secundario" data-accion="recargar">Intentar de nuevo</button>
+    </section>
+
+    <section id="v-login" class="oculto">
+      <div class="tarjeta">
+        <h2>Hola. Estamos para ayudarte.</h2>
+        <p>Si te robaron tu WhatsApp, tu chip, tus redes o te sacaron dinero, aquí te decimos qué hacer primero.</p>
+        <p>Para cuidar tu caso, primero entra con tu cuenta de Google.</p>
+        <button type="button" id="btn-google">Entrar con Google</button>
+        <p class="ayuda">Esta es una versión de prueba (DEMO). Los casos que ves aquí son inventados.</p>
+      </div>
+    </section>
+
+    <section id="v-relato" class="oculto">
+      <form id="form-relato" class="tarjeta" novalidate>
+        <h2>¿Qué pasó?</h2>
+        <p>Cuéntalo con tus palabras, como se lo dirías a un amigo.</p>
+        <p class="ayuda"><strong>No escribas</strong> códigos, contraseñas, NIP, números de tarjeta, CLABE ni CURP.</p>
+        <label for="relato">Lo que pasó</label>
+        <textarea id="relato" name="description" maxlength="500" required
+          placeholder="Ejemplo: me hakearon el wats y les esta pidiendo dinero a mis contactos"></textarea>
+        <p class="ayuda" id="contador">0 de 500 letras</p>
+        <div id="relato-error" class="error oculto" role="alert"></div>
+        <button type="submit" id="btn-enviar">Enviar</button>
+      </form>
+    </section>
+
+    <section id="v-caso" class="oculto">
+      <div class="burbuja" id="caso-relato"></div>
+      <div class="tarjeta">
+        <h2>Recibimos tu caso</h2>
+        <p>Una voluntaria lo va a revisar. Antes de darte el primer paso, te va a llamar para confirmar que eres tú.</p>
+        <p class="ayuda">No te vamos a mandar alertas ni mensajes. Entra aquí cuando quieras para ver si ya hay respuesta.</p>
+        <button type="button" class="secundario" data-accion="recargar">Ver si ya hay respuesta</button>
+      </div>
+    </section>
+
+    <section id="v-sesion" class="oculto">
+      <button type="button" class="secundario" id="btn-salir">Salir</button>
     </section>
   </main>
 
