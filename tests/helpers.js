@@ -99,3 +99,17 @@ export function spyConsole() {
     },
   };
 }
+
+// Conteos para la regla de capacidad (HEAD con Prefer: count=exact).
+export function capacityRoutes(state) {
+  return [
+    {
+      match: (u, init) => init.method === 'HEAD' && u.startsWith(`${SUPA}/rest/v1/cases?`),
+      reply: () => ({ headers: { 'content-range': `*/${state.active}` } }),
+    },
+    {
+      match: (u, init) => init.method === 'HEAD' && u.startsWith(`${SUPA}/rest/v1/volunteers?`),
+      reply: () => ({ headers: { 'content-range': `*/${state.volunteers}` } }),
+    },
+  ];
+}

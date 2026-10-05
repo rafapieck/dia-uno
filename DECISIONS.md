@@ -65,7 +65,28 @@ Formato: fecha · decisión · por qué.
 - **Sin `temperature: 0`:** la guía de Gemini 3 pide dejar la temperatura por defecto; el `responseSchema` con enums ya restringe la salida.
 - **Llaves nuevas `AQ.`:** AI Studio ya solo genera este formato. Se mandan igual en el header `x-goog-api-key`; el 404 (y no un 401) confirma que la llave sí fue aceptada.
 
+- **Paso D ✅ (confirmado por Rafael):** prueba 25 (IA simulada sin llave) pasó. Con `GEMINI_API_KEY` y `gemini-3.5-flash-lite`, las pruebas 1, 3, 4, 5 y 19 pasaron y muestran "Sugerencia de IA".
+
+### F4 · Capacidad, "Mientras esperas" y número de callback
+
+- **Regla de capacidad en el servidor (`api/_lib/capacity.js`):** activos (`pending` + `confirmed`) ≥ voluntarias × `MAX_CASES_PER_VOLUNTEER` → no se aceptan casos.
+  - `/api/triage` la revisa **antes** de validar el texto y de llamar a la IA, y responde 409 sin crear la fila (prueba 10).
+  - `GET /api/capacity` solo responde sí o no, sin cifras del equipo.
+  - Con cero voluntarias no hay capacidad: es honesto, porque nadie atendería el caso.
+  - Valor inválido en la variable → 5.
+- **Carrera aceptada:** dos casos que lleguen al mismo segundo podrían pasar ambos el límite por uno. Para el slice basta; el límite por voluntaria de F5 sí se revalida al tomar el caso.
+- **Métrica de la Condición 5:** cada rechazo por capacidad escribe en los logs `triage: caso rechazado por capacidad`, sin datos de la víctima.
+- **"Mientras esperas"** es un texto fijo igual para los 5 tipos: no compartas ningún código, no pagues nada, avisa a tus contactos por otro medio. Aparece después de crear el caso y en la pantalla de "estamos al máximo".
+- **Pantalla "Hoy estamos al máximo":** mensaje honesto + Mientras esperas + canales oficiales (`js/oficiales.js`). Cada canal sin validar lleva `// TODO: validar` en el código y "(dato por confirmar · DEMO)" en pantalla. No se inventaron números: solo 911, 089, "el número atrás de tu tarjeta" y sitios oficiales.
+- **Callback:** la víctima guarda el número directo en `callbacks` (RLS: solo en su caso pendiente, y no puede leerlo después). La app sabe si ya lo dejó con `has_callback()`.
+  - Se guarda normalizado (solo dígitos) y la base vuelve a revisar el formato.
+  - **SIM swap:** se pide también el número afectado **solo para comparar en el navegador** (no se envía ni se guarda). Si coincide en los últimos 10 dígitos, se rechaza y se pide el de un familiar o un fijo (prueba 2).
+- **Pantalla tras guardar:** "Te vamos a llamar desde **DEMO · 000 000 0000**" + etiqueta **Callback simulado** + "contesta solo si te llaman de ese número". Si `callback_failed_at` tiene valor (F5): "Intentamos llamarte; lo vamos a intentar otra vez".
+- **Sin alertas (prueba 14):** no hay notificaciones, push, service workers, temporizadores ni envío de SMS, correos o WhatsApp. Una prueba automática revisa el código para que no aparezcan. La víctima solo ve novedades si entra y toca "Ver si ya hay respuesta".
+- **Demo:** la cuenta B es la voluntaria y la coordinadora (alta a mano con SQL, como dice §10).
+
 ## Primer paso de mañana
 
-1. Rafael: repetir el Paso D4 (pruebas 1, 3, 4, 5 y 19 con llave) después del deploy del fix; no hace falta `GEMINI_MODEL`.
+1. Rafael: Paso E del README (dar de alta a B como voluntaria **en cuanto se publique F4**; pruebas 2, 10 y 14).
+2. Agente: F5 — panel `/voluntaria`, acciones por `/api` (confirmar/corregir tipo, "Callback verificado", "No contesta"), límite por voluntaria, dueño coordinador para fraude/extorsión y `/api/breaches` (HIBP por plataforma).
 2. Agente: F4 — `GET /api/capacity`, pantalla "Mientras esperas" y número de callback (SIM swap: distinto al afectado).

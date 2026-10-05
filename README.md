@@ -147,7 +147,7 @@ Son tres partes: Google (crear el "permiso" para entrar con Google), Supabase (c
 5. Al final escribe `me sacaron $150,000 pesos` → debe aceptarse y mostrar **"Recibimos tu caso"** (prueba 17). En **Table Editor → cases** aparece esa fila (es tu caso DEMO; puedes dejarla).
 6. Avísame cómo te fue (con captura si algo falla).
 
-### Paso D · Llave de Gemini y pruebas de la IA (toca ahora, después de F3)
+### Paso D · Llave de Gemini y pruebas de la IA ✅ hecho (2026-10-05): 25 sin llave; 1, 3, 4, 5 y 19 con Gemini
 
 **Antes de empezar: cómo "limpiar" un caso de prueba.** Cada víctima ve solo su caso abierto, y el botón para cerrarlo llega hasta F6. Para repetir pruebas, cierra tu caso desde Supabase → **SQL Editor → + New query**. Pega esto, cambia el correo y da **Run**:
 
@@ -190,3 +190,38 @@ where status <> 'closed'
 - **Si con la llave sigue saliendo "IA simulada":** Gemini falló. En Vercel entra a **Logs**, busca la línea `Gemini no respondió` y mándame el código que aparece al final (por ejemplo `gemini 404` o `gemini 429`). Esa línea no trae datos de la víctima.
 
 **D5. Avísame** qué salió en cada prueba.
+
+### Paso E · Dar de alta a la voluntaria y probar capacidad y callback (toca ahora, después de F4)
+
+> ⚠️ **Hazlo en cuanto se publique F4.** La regla de capacidad es *voluntarias × 5*. Con **cero voluntarias**, la app muestra "Hoy estamos al máximo" y no acepta casos.
+
+**E1. Da de alta a tu segunda cuenta como voluntaria (y coordinadora)**
+Para el demo, la víctima es tu cuenta A y la voluntaria es tu cuenta B. B también será la coordinadora que recibe fraude y extorsión (F5).
+1. Supabase → **SQL Editor → + New query**. Pega esto, cambia el correo por el de tu cuenta B y da **Run**:
+   ```sql
+   insert into public.volunteers (user_id, is_coordinator)
+   select id, true from auth.users where email = 'CORREO-DE-LA-CUENTA-B'
+   on conflict (user_id) do update set is_coordinator = true;
+   ```
+2. Debe decir **Success. 1 rows affected** (si dice 0, esa cuenta no existe en **Authentication → Users**).
+3. Ojo: `rls_test.sql` borra y vuelve a crear la fila de B en `volunteers` mientras corre. Si lo vuelves a correr, repite E1 al final.
+
+**E2. Prueba 2 · SIM swap pide otro número** (con la cuenta A)
+1. Cierra tu caso abierto con el SQL del Paso D.
+2. Escribe `me llego un sms y ya no tengo señal y me sacaron dinero` y da **Enviar**. Debe decir **Te clonaron el chip (SIM swap)**.
+3. Abajo aparece **"¿A qué número te llamamos?"** con el aviso "no uses tu número" y dos campos.
+4. En **Tu número afectado** y en **Número de un familiar o teléfono fijo** escribe el mismo número (por ejemplo `777 123 4567`) → **Guardar número**. **Acepto si:** lo rechaza con "Ese es el número que te clonaron…".
+5. Cambia el segundo por otro distinto (por ejemplo `777 765 4321`) → **Guardar número**. Debe aparecer **"Te vamos a llamar"** con **DEMO · 000 000 0000** y la etiqueta **Callback simulado**.
+6. En Supabase → **Table Editor → callbacks** aparece una fila con el número distinto (el afectado no se guarda). En **cases**, ese caso tiene `urgency = alta`.
+
+**E3. Prueba 10 · Al máximo no se crean casos**
+1. Vercel → **Settings → Environment Variables** → edita `MAX_CASES_PER_VOLUNTEER` y pon `1` → **Save** → **Deployments → ⋯ → Redeploy**.
+2. Ahora hay 1 voluntaria × 1 = 1 lugar, y el caso de A ya lo ocupa.
+3. Abre la app con la **cuenta B** (en otra ventana privada, o sal con **Salir** y entra con B). **Acepto si:** ves **"Hoy estamos al máximo"** con **Mientras esperas** y **Canales oficiales**, y **no** aparece el formulario.
+4. En **Table Editor → cases** no hay ningún caso nuevo de B.
+5. **Regresa el límite a `5`** y haz **Redeploy** otra vez.
+
+**E4. Prueba 14 · Sin alertas ni recordatorios**
+Deja el caso de A abierto 24 horas sin tocarlo. **Acepto si:** no te llega ninguna notificación, SMS, correo ni mensaje. (Además, `npm test` revisa que el código no tenga notificaciones, temporizadores ni envío de SMS, correos o WhatsApp.)
+
+**E5. Avísame** cómo te fue. Para E4 basta con que me digas al día siguiente si llegó algo.
