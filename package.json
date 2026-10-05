@@ -1,0 +1,12 @@
+{
+  "name": "dia-uno",
+  "private": true,
+  "type": "module",
+  "description": "Día Uno · Primer auxilio digital",
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
