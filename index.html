@@ -46,6 +46,27 @@
       </div>
     </section>
 
+    <section id="v-lleno" class="oculto">
+      <div class="tarjeta">
+        <h2>Hoy estamos al máximo</h2>
+        <p id="lleno-texto">Nuestras voluntarias ya tienen todos los casos que pueden atender bien, así que por ahora no podemos recibir el tuyo.</p>
+        <p>Preferimos decírtelo claro a dejarte esperando sin respuesta.</p>
+      </div>
+      <div class="tarjeta mientras">
+        <h2>Mientras esperas</h2>
+        <ol class="lista">
+          <li><strong>No compartas ningún código</strong>, ni con nosotros.</li>
+          <li><strong>No pagues ni deposites nada</strong>, aunque te presionen.</li>
+          <li><strong>Avisa a tus contactos por otro medio</strong> (una llamada u otra red) que no te depositen ni te pasen códigos.</li>
+        </ol>
+      </div>
+      <div class="tarjeta">
+        <h2>Canales oficiales</h2>
+        <ul class="lista" id="lleno-canales"></ul>
+        <button type="button" class="secundario" data-accion="recargar">Volver a revisar más tarde</button>
+      </div>
+    </section>
+
     <section id="v-relato" class="oculto">
       <form id="form-relato" class="tarjeta" novalidate>
         <h2>¿Qué pasó?</h2>
@@ -71,6 +92,42 @@
       <div class="tarjeta">
         <h2>Recibimos tu caso</h2>
         <p>Una voluntaria lo va a revisar. Antes de darte el primer paso, te va a llamar para confirmar que eres tú.</p>
+      </div>
+      <div class="tarjeta mientras">
+        <h2>Mientras esperas</h2>
+        <ol class="lista">
+          <li><strong>No compartas ningún código</strong>, ni con nosotros.</li>
+          <li><strong>No pagues ni deposites nada</strong>, aunque te presionen.</li>
+          <li><strong>Avisa a tus contactos por otro medio</strong> (una llamada u otra red) que no te depositen ni te pasen códigos.</li>
+        </ol>
+      </div>
+      <form id="form-callback" class="tarjeta oculto" novalidate>
+        <h2>¿A qué número te llamamos?</h2>
+        <p id="cb-explica">Una voluntaria te va a llamar para confirmar que eres tú. Déjanos un número donde te podamos encontrar.</p>
+        <div id="cb-sim" class="oculto">
+          <p><strong>Como te clonaron el chip, no uses tu número.</strong> Esa línea puede estar en manos de quien te robó. Déjanos el de un familiar o un teléfono fijo.</p>
+          <label for="cb-afectado">Tu número afectado</label>
+          <input id="cb-afectado" type="tel" inputmode="tel" autocomplete="off" placeholder="777 123 4567">
+          <p class="ayuda">Solo lo usamos para comparar en tu pantalla. No lo guardamos.</p>
+        </div>
+        <label for="cb-telefono" id="cb-telefono-label">Número para llamarte</label>
+        <input id="cb-telefono" type="tel" inputmode="tel" autocomplete="off" placeholder="777 123 4567">
+        <p class="ayuda">Solo lo ve la voluntaria. Se borra en cuanto confirma tu caso.</p>
+        <div id="cb-error" class="error oculto" role="alert"></div>
+        <button type="submit" id="btn-callback">Guardar número</button>
+      </form>
+      <div id="cb-listo" class="tarjeta oculto">
+        <h2>Te vamos a llamar</h2>
+        <p>La llamada vendrá del número publicado de Día Uno:</p>
+        <p class="numero-publicado">DEMO · 000 000 0000</p>
+        <p><span class="etiqueta">Callback simulado</span></p>
+        <p>Contesta solo si te llaman de ese número. <strong>Nunca te pediremos códigos ni contraseñas.</strong></p>
+      </div>
+      <div id="cb-fallo" class="tarjeta oculto">
+        <h2>Intentamos llamarte</h2>
+        <p>No pudimos comunicarnos contigo. No te preocupes: lo vamos a intentar otra vez desde <strong>DEMO · 000 000 0000</strong>.</p>
+      </div>
+      <div class="tarjeta">
         <p class="ayuda">No te vamos a mandar alertas ni mensajes. Entra aquí cuando quieras para ver si ya hay respuesta.</p>
         <button type="button" class="secundario" data-accion="recargar">Ver si ya hay respuesta</button>
       </div>

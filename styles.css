@@ -177,6 +177,10 @@ ul.lista li, ol.lista li { margin: 6px 0; }
 .sugerencia-titulo { margin: 0; color: var(--gris); font-weight: 600; }
 #caso-tipo { color: var(--verde); font-size: 1.25rem; margin: 2px 0 8px; }
 
+.numero-publicado { font-size: 1.4rem; font-weight: 800; margin: 4px 0; letter-spacing: 0.03em; }
+.por-validar { color: var(--gris); font-size: 0.8rem; }
+.mientras { border-left: 8px solid var(--amarillo); }
+
 .rojo { border-left: 8px solid var(--rojo); }
 .espera-roja { color: var(--rojo); font-weight: 800; }
 

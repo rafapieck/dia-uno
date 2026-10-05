@@ -2,18 +2,21 @@
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import handler from '../api/triage.js';
-import { makeReq, makeRes, setEnv, mockFetch, authRoute, spyConsole, SUPA, USERS } from './helpers.js';
+import { makeReq, makeRes, setEnv, mockFetch, authRoute, spyConsole, capacityRoutes, SUPA, USERS } from './helpers.js';
 
 let fetchMock;
 let consoleSpy;
 let inserted;
+let capacity;
 
 beforeEach(() => {
   setEnv();
   delete process.env.GEMINI_API_KEY;
   inserted = [];
+  capacity = { active: 0, volunteers: 1 };
   fetchMock = mockFetch([
     authRoute,
+    ...capacityRoutes(capacity),
     {
       match: (u, init) => u.startsWith(`${SUPA}/rest/v1/cases`) && init.method === 'POST',
       reply: (u, init) => {
@@ -39,7 +42,7 @@ async function post(description, token = 'tok-a') {
 
 function assertNothingSavedOrLogged(text) {
   assert.equal(inserted.length, 0, 'no debe guardar nada');
-  assert.ok(!fetchMock.calls.some((c) => c.url.includes('/rest/v1/')), 'no debe tocar la base');
+  assert.ok(!fetchMock.calls.some((c) => c.url.includes('/rest/v1/') && c.method !== 'HEAD'), 'no debe escribir en la base');
   assert.ok(!consoleSpy.logged.some((l) => l.includes(text)), 'no debe loguear el texto');
 }
 
@@ -141,6 +144,7 @@ test('Gemini solo recibe el texto redactado (sin teléfono ni correo)', async ()
   let sentToGemini = '';
   fetchMock = mockFetch([
     authRoute,
+    ...capacityRoutes(capacity),
     {
       match: (u) => u.startsWith('https://generativelanguage.googleapis.com/'),
       reply: (u, init) => {
@@ -162,4 +166,23 @@ test('Gemini solo recibe el texto redactado (sin teléfono ni correo)', async ()
   assert.ok(sentToGemini.includes('[teléfono]') && sentToGemini.includes('[correo]'));
   assert.ok(!sentToGemini.includes('5512345678') && !sentToGemini.includes('beto@gmail.com'));
   assert.equal(inserted[0].ai_simulated, false);
+});
+
+test('10 · límite 1 caso por voluntaria, 1 voluntaria y 1 caso activo → "estamos al máximo", no se crea la fila', async () => {
+  process.env.MAX_CASES_PER_VOLUNTEER = '1';
+  capacity.active = 1;
+  capacity.volunteers = 1;
+  const res = await post('me hakearon el wats y piden dinero');
+  assert.equal(res.statusCode, 409);
+  assert.equal(res.body.error, 'capacity');
+  assert.match(res.body.message, /al máximo/);
+  assert.equal(inserted.length, 0);
+  assert.ok(!fetchMock.calls.some((c) => c.url.includes('generativelanguage')), 'ni siquiera llama a la IA');
+});
+
+test('sin voluntarias dadas de alta no se aceptan casos', async () => {
+  capacity.volunteers = 0;
+  const res = await post('me hakearon el wats y piden dinero');
+  assert.equal(res.statusCode, 409);
+  assert.equal(inserted.length, 0);
 });
