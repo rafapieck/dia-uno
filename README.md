@@ -191,7 +191,7 @@ where status <> 'closed'
 
 **D5. Avísame** qué salió en cada prueba.
 
-### Paso E · Dar de alta a la voluntaria y probar capacidad y callback (toca ahora, después de F4)
+### Paso E · Voluntaria, capacidad y callback ✅ E1 y E2 hechos (2026-10-05); E3 omitida (cubierta por `npm test`)
 
 > ⚠️ **Hazlo en cuanto se publique F4.** La regla de capacidad es *voluntarias × 5*. Con **cero voluntarias**, la app muestra "Hoy estamos al máximo" y no acepta casos.
 
@@ -225,3 +225,20 @@ Para el demo, la víctima es tu cuenta A y la voluntaria es tu cuenta B. B tambi
 Deja el caso de A abierto 24 horas sin tocarlo. **Acepto si:** no te llega ninguna notificación, SMS, correo ni mensaje. (Además, `npm test` revisa que el código no tenga notificaciones, temporizadores ni envío de SMS, correos o WhatsApp.)
 
 **E5. Avísame** cómo te fue. Para E4 basta con que me digas al día siguiente si llegó algo.
+
+### Paso F · Flujo completo con una sola cuenta (toca ahora, después de F5–F7)
+
+**DEMO:** tu cuenta principal es a la vez víctima y voluntaria/coordinadora. El panel lo marca con la etiqueta **DEMO · Es tu propio caso**.
+
+1. **Tu cuenta como voluntaria y coordinadora** (Supabase → SQL Editor → Run, con tu correo):
+   ```sql
+   insert into public.volunteers (user_id, is_coordinator)
+   select id, true from auth.users where email = 'TU-CORREO@gmail.com'
+   on conflict (user_id) do update set is_coordinator = true;
+   ```
+2. **Secreto del cron:** Vercel → Settings → Environment Variables → `CRON_SECRET` = una frase larga inventada (30+ caracteres, sin espacios). Marca **Sensitive** → Save → **Deployments → ⋯ → Redeploy**.
+3. **Víctima:** en <https://dia-uno.vercel.app> cierra tu caso viejo (SQL del Paso D) y escribe `me hakearon el wats y piden dinero` → deja un número en "¿A qué número te llamamos?".
+4. **Voluntaria:** abre <https://dia-uno.vercel.app/voluntaria> (o el enlace "Soy voluntaria" abajo) → en tu caso toca **1 · Confirmar tipo** → **2 · Callback verificado**.
+5. **Víctima:** regresa a <https://dia-uno.vercel.app> → **Ver si ya hay respuesta** → aparecen **✅ Confirmado por una voluntaria** y los pasos. Marca uno → **Cerrar mi caso** → ves el resumen y los canales oficiales (nunca dice "estás a salvo").
+
+Pruebas extra si hay tiempo: antes del paso 4, **No contesta** → la víctima ve "Intentamos llamarte" y no ve el checklist (prueba 7). Con el caso `me hicieron cargos que no reconozco en mi tarjeta`, el paso 1 es llamar al banco (prueba 4). El cron se puede correr a mano en Vercel → **Settings → Cron Jobs → Run** (la prueba 24 ya pasó en Supabase real con `rls_test.sql`).

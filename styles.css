@@ -181,6 +181,13 @@ ul.lista li, ol.lista li { margin: 6px 0; }
 .por-validar { color: var(--gris); font-size: 0.8rem; }
 .mientras { border-left: 8px solid var(--amarillo); }
 
+.aviso-spei { background: #fff6d6; border-radius: 10px; padding: 10px 12px; font-weight: 600; }
+.paso-hecho { text-decoration: line-through; color: var(--gris); }
+footer.pie a { color: var(--verde); font-weight: 700; }
+
+.titulo-seccion { font-size: 1.1rem; margin: 8px 0; }
+.caso label { margin-top: 8px; }
+
 .rojo { border-left: 8px solid var(--rojo); }
 .espera-roja { color: var(--rojo); font-weight: 800; }
 

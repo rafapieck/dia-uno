@@ -85,8 +85,35 @@ Formato: fecha · decisión · por qué.
 - **Sin alertas (prueba 14):** no hay notificaciones, push, service workers, temporizadores ni envío de SMS, correos o WhatsApp. Una prueba automática revisa el código para que no aparezcan. La víctima solo ve novedades si entra y toca "Ver si ya hay respuesta".
 - **Demo:** la cuenta B es la voluntaria y la coordinadora (alta a mano con SQL, como dice §10).
 
+- **Paso E (Rafael):** E1 ✅ (voluntaria dada de alta), E2 ✅ (prueba 2 en la URL real). E3 (prueba 10 en vivo) omitida por tiempo: la segunda cuenta no logra entrar con Google. La cubre `npm test`. `MAX_CASES_PER_VOLUNTEER` regresó a 5.
+
+### F5–F7 · Panel, checklist, cierre y retención (un solo PR, por la entrega de hoy)
+
+- **DEMO: una sola cuenta es víctima y voluntaria/coordinadora** (pedido por Rafael). Ajustes para que funcione:
+  - La pantalla de víctima filtra sus casos por `user_id` (del token), porque RLS le deja ver los pendientes de otras personas como voluntaria. Sin ese filtro vería casos ajenos; se comprobó en Postgres local.
+  - El panel permite verificar el propio caso y lo marca con **DEMO · Es tu propio caso**. En producción real habría que prohibirlo.
+- **Panel `/voluntaria`** (`voluntaria.html` + `js/voluntaria.js`). Solo lo ve quien está en `volunteers` (403 si no). Muestra:
+  - descripción, tipo, urgencia, etiqueta de la IA y espera (en rojo si pasa de 30 min);
+  - el teléfono para el callback.
+
+  Nunca muestra `user_id`, correo ni nombre de la víctima.
+- **Acciones solo por `/api/volunteer/action` con service_role:**
+  - `set_type` corrige el tipo y no libera nada (prueba 6).
+  - `no_answer` llena `callback_failed_at`, conserva el número y la víctima ve "Intentamos llamarte" (prueba 7).
+  - `verified` exige el tipo del catálogo y el número dejado. Revisa el límite de casos activos del dueño (prueba 11) y llena `status = confirmed`, `verified_at`, `confirmed_at` y `owner_id`. Luego borra `callbacks` explícitamente, además del trigger (prueba 8).
+  - Fraude y extorsión → dueño = coordinador (prueba 4).
+- **HIBP (`/api/breaches`):** solo voluntarias, solo dominios de un catálogo cerrado de plataformas, `User-Agent` propio, sin guardar nada. Siempre trae la nota "no aparecer en brechas conocidas no significa que la cuenta esté a salvo".
+- **Checklists (`js/checklists.js`):** de 4 a 5 pasos por tipo, basados en procesos oficiales.
+  - WhatsApp empieza como pide el PACKET.
+  - En fraude y extorsión, el paso 1 es "ESCALAMIENTO OFICIAL".
+  - Los pasos por revisar llevan `// TODO: validar` y `todo: true`. Los únicos números que aparecen son 911 y 089, también por validar.
+- **Checklist de la víctima:** solo con `status = confirmed` y `verified_at` lleno. RLS exige lo mismo al guardar `checklist_progress`, que se guarda con upsert. Lleva el texto fijo del SPEI.
+- **Cierre:** la víctima cierra su caso por RLS y el trigger pone `[borrado]` (prueba 23). El resumen muestra los pasos hechos y los canales oficiales. Nunca dice "estás a salvo" (prueba 13, revisada en todo el código).
+- **Retención (`/api/cron/retention`):** Vercel Cron diario a las 09:00 UTC (`vercel.json`). Exige `Authorization: Bearer CRON_SECRET` (Vercel lo manda solo) y, sin secreto configurado, falla cerrado. Llama a `close_stale_cases()`, que cierra los casos de más de 7 días, y el trigger borra la descripción y el callback (prueba 24, ya probada en Supabase real).
+- **Sin confirmación al cerrar:** no se usa `confirm()`, para no tener diálogos ni alertas; el botón es explícito.
+
 ## Primer paso de mañana
 
-1. Rafael: Paso E del README (dar de alta a B como voluntaria **en cuanto se publique F4**; pruebas 2, 10 y 14).
-2. Agente: F5 — panel `/voluntaria`, acciones por `/api` (confirmar/corregir tipo, "Callback verificado", "No contesta"), límite por voluntaria, dueño coordinador para fraude/extorsión y `/api/breaches` (HIBP por plataforma).
+1. Rafael: Paso F del README (alta de su cuenta como voluntaria/coordinadora, `CRON_SECRET`, flujo completo en la URL real).
+2. Agente: F8 — correr las 26 pruebas y anotarlas en `docs/TEST_RESULTS.md`, revisar secretos (prueba 26) y actualizar el README.
 2. Agente: F4 — `GET /api/capacity`, pantalla "Mientras esperas" y número de callback (SIM swap: distinto al afectado).

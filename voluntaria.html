@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Día Uno · Panel de voluntaria</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/js/voluntaria.js"></script>
+</head>
+<body>
+  <div class="top">
+    <header class="barra">
+      <div>
+        <h1>Día Uno · Voluntaria</h1>
+        <p>Verifica y confirma antes del primer paso</p>
+      </div>
+      <span class="demo">DEMO</span>
+    </header>
+    <div class="banner" role="note">⚠️ Nunca pidas códigos ni contraseñas a la víctima</div>
+  </div>
+
+  <main aria-live="polite">
+    <section id="p-cargando" class="tarjeta"><p>Cargando…</p></section>
+
+    <section id="p-login" class="tarjeta oculto">
+      <h2>Panel de voluntaria</h2>
+      <p>Entra con la cuenta de Google que dieron de alta como voluntaria.</p>
+      <button type="button" id="btn-google">Entrar con Google</button>
+    </section>
+
+    <section id="p-prohibido" class="tarjeta oculto">
+      <h2>Esta página es solo para voluntarias</h2>
+      <p>Tu cuenta no está dada de alta como voluntaria. Las altas se hacen a mano en la base de datos.</p>
+      <a class="boton" href="/">Ir a la página de víctimas</a>
+    </section>
+
+    <section id="p-error" class="tarjeta oculto">
+      <h2>Algo salió mal</h2>
+      <p id="p-error-texto">No pudimos cargar el panel.</p>
+      <button type="button" class="secundario" data-accion="recargar">Intentar de nuevo</button>
+    </section>
+
+    <section id="p-panel" class="oculto">
+      <div class="tarjeta">
+        <p><strong id="p-carga"></strong></p>
+        <p class="ayuda">Meta: verificar y confirmar en menos de 30 minutos. En rojo, los que ya pasaron.</p>
+        <p class="ayuda">Callback desde el número publicado <strong>DEMO · 000 000 0000</strong> <span class="etiqueta">Callback simulado</span></p>
+        <div id="p-mensaje" class="error oculto" role="alert"></div>
+        <button type="button" class="secundario" data-accion="recargar">Actualizar lista</button>
+      </div>
+      <h2 class="titulo-seccion">Casos pendientes</h2>
+      <div id="p-casos"></div>
+      <p id="p-vacio" class="tarjeta oculto">No hay casos pendientes.</p>
+
+      <div class="tarjeta">
+        <h2>Brechas públicas de una plataforma</h2>
+        <p class="ayuda">Consulta Have I Been Pwned solo por plataforma, nunca con datos de la víctima.</p>
+        <label for="hibp-plataforma">Plataforma</label>
+        <select id="hibp-plataforma">
+          <option value="whatsapp">WhatsApp</option>
+          <option value="facebook">Facebook</option>
+          <option value="instagram">Instagram</option>
+          <option value="tiktok">TikTok</option>
+          <option value="x">X / Twitter</option>
+          <option value="google">Google</option>
+        </select>
+        <button type="button" id="btn-hibp">Consultar</button>
+        <ul class="lista" id="hibp-lista"></ul>
+        <p class="aviso-spei" id="hibp-nota">No aparecer en brechas conocidas no significa que la cuenta esté a salvo.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">Día Uno · <span class="demo">DEMO</span> · <a href="/">Página de víctimas</a></footer>
+
+  <template id="tpl-caso">
+    <article class="tarjeta caso">
+      <p class="espera"></p>
+      <p class="propio oculto"><span class="demo">DEMO</span> Es tu propio caso (cuenta de prueba víctima y voluntaria)</p>
+      <div class="burbuja relato"></div>
+      <p><strong>Urgencia:</strong> <span class="urgencia"></span> · <span class="etiqueta ia"></span></p>
+      <label>Tipo (confírmalo o corrígelo)</label>
+      <select class="tipo">
+        <option value="sin_clasificar">Sin clasificar</option>
+        <option value="whatsapp">WhatsApp secuestrado</option>
+        <option value="redes">Redes sociales hackeadas</option>
+        <option value="sim_swap">Te clonaron el chip (SIM swap)</option>
+        <option value="fraude">Fraude bancario</option>
+        <option value="extorsion">Extorsión</option>
+      </select>
+      <button type="button" class="secundario btn-tipo">1 · Confirmar tipo</button>
+      <p class="telefono"></p>
+      <p class="fallo ayuda oculto">Ya se intentó llamar y no contestó.</p>
+      <button type="button" class="btn-verificado">2 · Callback verificado</button>
+      <button type="button" class="peligro btn-nocontesta">No contesta</button>
+      <p class="ayuda">Fraude y extorsión se asignan al coordinador.</p>
+    </article>
+  </template>
+</body>
+</html>

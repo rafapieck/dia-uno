@@ -128,6 +128,20 @@ export async function getSession() {
   return session;
 }
 
+// Id del usuario de la sesión (del token). Hace falta porque una voluntaria también puede ser víctima,
+// y RLS le deja ver los casos pendientes de otras personas: la vista de víctima filtra por este id.
+export async function getUserId() {
+  const session = await getSession();
+  if (!session) return null;
+  if (session.user_id) return session.user_id;
+  try {
+    const payload = session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(payload)).sub || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function signOut() {
   const session = await getSession();
   clearSession();
