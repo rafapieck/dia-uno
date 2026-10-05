@@ -186,6 +186,7 @@ where status <> 'closed'
 
 - La urgencia no se le muestra a la víctima (para no asustarla). Si quieres verla, está en **Table Editor → cases → urgency**: la 5 debe decir `alta`.
 - Lo de "paso 1 = llamar al banco / escalamiento oficial" y "dueño = coordinador" (pruebas 4 y 5) llega en F5 y F6.
+- No hace falta poner `GEMINI_MODEL`: por defecto se usa `gemini-3.5-flash-lite`, y si Google lo retira, la app busca sola otro modelo Flash vigente. Si alguna vez quieres forzar uno, pon el nombre exacto (por ejemplo `gemini-3.5-flash-lite`) en `GEMINI_MODEL` en Vercel y haz Redeploy.
 - **Si con la llave sigue saliendo "IA simulada":** Gemini falló. En Vercel entra a **Logs**, busca la línea `Gemini no respondió` y mándame el código que aparece al final (por ejemplo `gemini 404` o `gemini 429`). Esa línea no trae datos de la víctima.
 
 **D5. Avísame** qué salió en cada prueba.

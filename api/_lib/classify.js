@@ -9,7 +9,10 @@ export const INCIDENT_TYPES = ['whatsapp', 'redes', 'sim_swap', 'fraude', 'extor
 export const URGENCIES = ['baja', 'media', 'alta'];
 export const UNCLASSIFIED = 'sin_clasificar';
 
-const DEFAULT_MODEL = 'gemini-2.5-flash';
+// Estable, rápido y con cuota gratis amplia; basta para elegir entre 5 tipos.
+// (Los 2.5 dan 404 a proyectos nuevos.) Si Google lo retira, discoverModel() busca otro vigente.
+export const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
+const API = 'https://generativelanguage.googleapis.com/v1beta';
 const TIMEOUT_MS = 8000;
 
 export function validateClassification(raw) {
@@ -71,7 +74,6 @@ export function buildGeminiRequest(text) {
     systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
     contents: [{ role: 'user', parts: [{ text: wrapAsData(text) }] }],
     generationConfig: {
-      temperature: 0,
       responseMimeType: 'application/json',
       responseSchema: {
         type: 'OBJECT',
@@ -85,20 +87,24 @@ export function buildGeminiRequest(text) {
   };
 }
 
+class GeminiHttpError extends Error {
+  constructor(status) {
+    super(`gemini ${status}`);
+    this.status = status;
+  }
+}
+
 export async function geminiClassify(text, { apiKey, model = DEFAULT_MODEL, timeoutMs = TIMEOUT_MS } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify(buildGeminiRequest(text)),
-        signal: controller.signal,
-      },
-    );
-    if (!r.ok) throw new Error(`gemini ${r.status}`);
+    const r = await fetch(`${API}/models/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify(buildGeminiRequest(text)),
+      signal: controller.signal,
+    });
+    if (!r.ok) throw new GeminiHttpError(r.status);
     const data = await r.json();
     const out = (data?.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('');
     return JSON.parse(out);
@@ -107,17 +113,55 @@ export async function geminiClassify(text, { apiKey, model = DEFAULT_MODEL, time
   }
 }
 
+// Si el modelo configurado ya no existe (404), pregunta a Google qué modelos hay y elige
+// el Flash estable más nuevo (prefiere Flash-Lite: más rápido y con más cuota gratis).
+let discoveredModel = null;
+
+export function pickModel(models) {
+  const candidates = [];
+  for (const m of models || []) {
+    if (!m?.supportedGenerationMethods?.includes('generateContent')) continue;
+    const id = String(m.name || '').replace(/^models\//, '');
+    const match = /^gemini-(\d+)(?:\.(\d+))?-flash(-lite)?$/.exec(id);
+    if (match) candidates.push({ id, major: Number(match[1]), minor: Number(match[2] || 0), lite: Boolean(match[3]) });
+  }
+  candidates.sort((a, b) => b.major - a.major || b.minor - a.minor || Number(b.lite) - Number(a.lite));
+  return candidates[0]?.id || null;
+}
+
+export async function discoverModel(apiKey) {
+  if (discoveredModel) return discoveredModel;
+  const r = await fetch(`${API}/models?pageSize=200`, { headers: { 'x-goog-api-key': apiKey } });
+  if (!r.ok) throw new GeminiHttpError(r.status);
+  const data = await r.json();
+  discoveredModel = pickModel(data?.models);
+  if (!discoveredModel) throw new Error('gemini sin modelos');
+  console.warn('triage: el modelo de Gemini configurado no existe; uso', discoveredModel);
+  return discoveredModel;
+}
+
+export function resetDiscoveredModel() {
+  discoveredModel = null;
+}
+
 // Regresa { incident_type, urgency, ai_simulated }.
 export async function classify(text) {
   const apiKey = process.env.GEMINI_API_KEY || '';
   if (apiKey) {
     try {
-      const raw = await geminiClassify(text, { apiKey, model: process.env.GEMINI_MODEL || DEFAULT_MODEL });
+      const model = discoveredModel || process.env.GEMINI_MODEL || DEFAULT_MODEL;
+      let raw;
+      try {
+        raw = await geminiClassify(text, { apiKey, model });
+      } catch (err) {
+        if (err?.status !== 404 || discoveredModel) throw err;
+        raw = await geminiClassify(text, { apiKey, model: await discoverModel(apiKey) });
+      }
       return { ...validateClassification(raw), ai_simulated: false };
     } catch (err) {
       // Solo el tipo de error; nunca el texto de la víctima.
       // (un SyntaxError de JSON.parse podría citar la salida del modelo, por eso no se loguea su mensaje).
-      const reason = err?.name === 'AbortError' ? 'timeout' : /^gemini \d+$/.test(err?.message) ? err.message : err?.name;
+      const reason = err?.name === 'AbortError' ? 'timeout' : /^gemini /.test(err?.message) ? err.message : err?.name;
       console.error('triage: Gemini no respondió, uso clasificación simulada', reason);
     }
   }

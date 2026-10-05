@@ -7,6 +7,9 @@ import {
   validateClassification,
   buildGeminiRequest,
   wrapAsData,
+  pickModel,
+  resetDiscoveredModel,
+  DEFAULT_MODEL,
 } from '../api/_lib/classify.js';
 import { mockFetch, spyConsole } from './helpers.js';
 
@@ -26,6 +29,7 @@ let fetchMock;
 let consoleSpy;
 
 beforeEach(() => {
+  resetDiscoveredModel();
   delete process.env.GEMINI_API_KEY;
   delete process.env.GEMINI_MODEL;
   consoleSpy = spyConsole();
@@ -108,7 +112,8 @@ test('con llave: usa Gemini y NO marca "IA simulada"', async () => {
   const call = fetchMock.calls[0];
   assert.equal(call.headers['x-goog-api-key'], 'gem-demo');
   assert.ok(!call.url.includes('gem-demo'), 'la llave no va en la URL');
-  assert.match(call.url, /models\/gemini-2\.5-flash:generateContent$/);
+  assert.equal(DEFAULT_MODEL, 'gemini-3.5-flash-lite');
+  assert.match(call.url, /models\/gemini-3\.5-flash-lite:generateContent$/);
 });
 
 test('19 · con llave: si Gemini obedece la inyección ("ninguno"), queda "sin_clasificar"', async () => {
@@ -162,4 +167,62 @@ test('25 · la llamada a Gemini se corta si no contesta a tiempo (luego classify
   } finally {
     globalThis.fetch = original;
   }
+});
+
+// ── Modelo retirado (404) → busca uno vigente ────────────────────────────
+const MODEL_LIST = {
+  models: [
+    { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-3.8-flash', supportedGenerationMethods: ['generateContent', 'countTokens'] },
+    { name: 'models/gemini-3.8-flash-preview-11-2026', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-3.8-flash-lite-tts', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/gemini-3.5-flash-lite', supportedGenerationMethods: ['generateContent'] },
+    { name: 'models/text-embedding-004', supportedGenerationMethods: ['embedContent'] },
+  ],
+};
+
+test('pickModel: el Flash estable más nuevo (prefiere Lite), sin preview/tts/embeddings', () => {
+  assert.equal(pickModel(MODEL_LIST.models), 'gemini-3.8-flash');
+  assert.equal(
+    pickModel([...MODEL_LIST.models, { name: 'models/gemini-3.8-flash-lite', supportedGenerationMethods: ['generateContent'] }]),
+    'gemini-3.8-flash-lite',
+  );
+  assert.equal(
+    pickModel([{ name: 'models/gemini-3.10-flash', supportedGenerationMethods: ['generateContent'] }, ...MODEL_LIST.models]),
+    'gemini-3.10-flash',
+    '3.10 es más nuevo que 3.8',
+  );
+  assert.equal(pickModel([]), null);
+});
+
+test('modelo configurado da 404 → pregunta la lista, reintenta con uno vigente y lo recuerda', async () => {
+  process.env.GEMINI_API_KEY = 'AQ.demo';
+  process.env.GEMINI_MODEL = 'gemini-2.5-flash';
+  fetchMock = mockFetch([
+    { match: (u) => u.includes('/models/gemini-2.5-flash:'), reply: () => ({ status: 404, json: {} }) },
+    { match: (u) => u.includes('/models?'), reply: () => ({ json: MODEL_LIST }) },
+    geminiReply({ incident_type: 'redes', urgency: 'media' }),
+  ]);
+  const r = await classify('me entraron al face y cambiaron mi contraseña');
+  assert.deepEqual(r, { incident_type: 'redes', urgency: 'media', ai_simulated: false });
+  assert.match(fetchMock.calls.at(-1).url, /models\/gemini-3\.8-flash:generateContent$/);
+  assert.equal(fetchMock.calls[1].headers['x-goog-api-key'], 'AQ.demo', 'la lista también usa el header');
+
+  fetchMock.calls.length = 0;
+  await classify('me entraron al insta');
+  assert.equal(fetchMock.calls.length, 1, 'la segunda vez va directo al modelo encontrado');
+  assert.match(fetchMock.calls[0].url, /gemini-3\.8-flash:generateContent$/);
+});
+
+test('25 · 404 y la lista también falla → simulada, sin datos de la víctima en el log', async () => {
+  process.env.GEMINI_API_KEY = 'AQ.demo';
+  fetchMock = mockFetch([
+    { match: (u) => u.includes(':generateContent'), reply: () => ({ status: 404, json: {} }) },
+    { match: (u) => u.includes('/models?'), reply: () => ({ status: 403, json: {} }) },
+  ]);
+  const r = await classify('me hakearon el wats y piden dinero');
+  assert.equal(r.ai_simulated, true);
+  assert.equal(r.incident_type, 'whatsapp');
+  assert.ok(consoleSpy.logged.some((l) => l.includes('gemini 403')));
+  assert.ok(!consoleSpy.logged.some((l) => l.includes('wats')));
 });

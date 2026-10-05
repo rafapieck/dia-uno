@@ -59,7 +59,13 @@ Formato: fecha · decisión · por qué.
 - **En pantalla, la IA es sugerencia:** "Parece que es: …" + etiqueta ("IA simulada" o "Sugerencia de IA") + "una voluntaria la va a revisar y puede corregirla". La urgencia **no** se le muestra a la víctima (sin lenguaje de miedo, §9 Condición 4); es para la voluntaria.
 - **Gemini solo recibe el texto redactado** (prueba automática: ni teléfono ni correo llegan a la petición).
 
+- **Paso D, primera vuelta (Rafael):** la prueba 25 pasó (IA simulada sin llave). Con llave, Gemini respondió **404**: Google limita los modelos 2.5 a proyectos que ya los usaban, y recomienda la familia 3.x para proyectos nuevos.
+- **Fix: modelo por defecto `gemini-3.5-flash-lite`.** Es estable, de baja latencia y con la cuota gratis más amplia de la familia Flash (3.8 Flash tiene muy pocas peticiones gratis al día). Basta para elegir 1 de 5 tipos.
+- **Autodescubrimiento si el modelo se retira:** ante un 404, `/api/triage` pide a Google la lista de modelos (`GET /v1beta/models`, misma llave en el header) y elige el Flash estable más nuevo, prefiriendo Flash-Lite y sin preview, TTS ni imagen. Reintenta una vez y lo recuerda mientras la función siga viva. Si eso también falla → IA simulada.
+- **Sin `temperature: 0`:** la guía de Gemini 3 pide dejar la temperatura por defecto; el `responseSchema` con enums ya restringe la salida.
+- **Llaves nuevas `AQ.`:** AI Studio ya solo genera este formato. Se mandan igual en el header `x-goog-api-key`; el 404 (y no un 401) confirma que la llave sí fue aceptada.
+
 ## Primer paso de mañana
 
-1. Rafael: Paso D del README (prueba 25 sin llave, crear `GEMINI_API_KEY`, pruebas 1, 3, 4, 5 y 19 con llave).
+1. Rafael: repetir el Paso D4 (pruebas 1, 3, 4, 5 y 19 con llave) después del deploy del fix; no hace falta `GEMINI_MODEL`.
 2. Agente: F4 — `GET /api/capacity`, pantalla "Mientras esperas" y número de callback (SIM swap: distinto al afectado).
