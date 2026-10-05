@@ -45,7 +45,21 @@ Formato: fecha · decisión · por qué.
 - **Redacción:** correos → `[correo]`, números de 8–13 dígitos → `[teléfono]` (excepto montos).
 - **Una sola pantalla de caso abierto:** si la víctima ya tiene un caso sin cerrar, ve ese caso en lugar del formulario.
 
+- **Paso C ✅ (confirmado por Rafael):** el login con Google funciona en <https://dia-uno.vercel.app>. En la URL real, la 15 (código) y la 16 (NIP) se bloquean, la 18 ("hol") pide 10 letras y la 17 ($150,000 pesos) se acepta y crea el caso. Falta probar a mano la tarjeta y la CURP de la 16 (las cubre `npm test`).
+- **Llaves de Supabase: legacy (anon y service_role, en formato JWT)**, elegidas por Rafael. `api/_lib/supabase.js` también acepta las nuevas (`sb_publishable_…` / `sb_secret_…`) por si hay que migrar.
+- **Segunda cuenta de prueba:** "Entrar con Google" solo funciona si el correo de Outlook es también una cuenta de Google; si no, se usa otra cuenta de Gmail como víctima B.
+
+### F3 · Triage con IA
+
+- **Gemini por REST con `fetch`** (sin SDK), modelo `gemini-2.5-flash` por defecto. La llave va en el header `x-goog-api-key`, nunca en la URL. Hay una variable **opcional** `GEMINI_MODEL` para cambiar de modelo sin tocar código si Google retira ese.
+- **Contra la inyección de instrucciones:** el relato va entre `<relato>…</relato>` y se le quitan `<` y `>` para que no pueda cerrar la etiqueta. Las instrucciones de sistema dicen que es un dato y no una orden, y el JSON se pide con `responseSchema` y enums.
+- **Validación:** aunque el modelo obedezca la inyección, la respuesta se valida en código contra el catálogo: un tipo fuera de él → `sin_clasificar`; una urgencia fuera de baja/media/alta → `null`.
+- **Respaldo "IA simulada":** si no hay llave, hay error, la respuesta no es JSON o no contesta en 8 s, se usan reglas de palabras clave. Soportan escritura coloquial ("wats", "face", "chip", "señal") y van en orden de prioridad: extorsión > SIM swap > WhatsApp > redes > fraude. Se guarda `ai_simulated = true` y la pantalla muestra **IA simulada**.
+- **Qué se loguea:** solo el código de error de Gemini o "timeout". Nunca el texto ni la salida del modelo, porque un error de `JSON.parse` podría citarla.
+- **En pantalla, la IA es sugerencia:** "Parece que es: …" + etiqueta ("IA simulada" o "Sugerencia de IA") + "una voluntaria la va a revisar y puede corregirla". La urgencia **no** se le muestra a la víctima (sin lenguaje de miedo, §9 Condición 4); es para la voluntaria.
+- **Gemini solo recibe el texto redactado** (prueba automática: ni teléfono ni correo llegan a la petición).
+
 ## Primer paso de mañana
 
-1. Rafael: Paso C del README (Google Sign-In, llaves en Vercel, redeploy) y pruebas 15–18 en el celular.
-2. Agente: F3 — triage con Gemini (texto delimitado como dato, validación contra el catálogo) y respaldo por palabras clave con etiqueta "IA simulada", más el paso para crear `GEMINI_API_KEY`.
+1. Rafael: Paso D del README (prueba 25 sin llave, crear `GEMINI_API_KEY`, pruebas 1, 3, 4, 5 y 19 con llave).
+2. Agente: F4 — `GET /api/capacity`, pantalla "Mientras esperas" y número de callback (SIM swap: distinto al afectado).
